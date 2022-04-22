@@ -7,7 +7,6 @@ import io
 import os
 import json
 import pandas as pd
-from sqlalchemy import null
 
 # Variáveis globais
 
@@ -37,8 +36,9 @@ def download(url):
     try:
         with zipfile.ZipFile("simplifierRNDS.zip", mode="r") as archive:
             for info in archive.infolist():
-                print("Extraindo ", info.filename)
+                print("Descompactando", info.filename)
                 archive.extract(info.filename, path=output_dir)
+                print("Descompactado")
     except zipfile.BadZipFile as error:
         print(error)
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         try:
             f = io.open(file_dir, encoding="utf-8")
-            print("Abrindo arquivo", file_dir)
+            print("Processando ", arquivo)
 
             data = json.load(f)
             
@@ -64,8 +64,6 @@ if __name__ == '__main__':
             for key in keys:
                 try:
                     dict[key] = data[key]
-                    if key == 'version':
-                        print(data[key])
                 except KeyError:
                     dict[key] = ''
 
@@ -81,11 +79,10 @@ if __name__ == '__main__':
             f.close()
             print(error)
     
-    recursos = pd.DataFrame(recursos_list)
-    print(recursos_list)
-    recursos.to_excel('recursos.xlsx')
+    print('Gerando relatório')
 
-    print('#### END ####')
+    recursos = pd.DataFrame(recursos_list)
+    recursos.to_excel('recursos.xlsx')
 
 # data quality
 # recursos sem id
