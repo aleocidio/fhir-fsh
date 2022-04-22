@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 try:
                     dict['lastUpdated'] = data['meta']['lastUpdated']
                 except KeyError:
-                    dict['meta'] = ''
+                    dict['lastUpdated'] = ''
                 
             recursos_list.append(dict)
             f.close()
