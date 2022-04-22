@@ -1,3 +1,4 @@
 simplifierRNDS/
 *.zip
 *.xlsx
+__pycache__/
