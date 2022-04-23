@@ -2,3 +2,4 @@ simplifierRNDS/
 *.zip
 *.xlsx
 __pycache__/
+*.ipynb
