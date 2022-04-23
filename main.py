@@ -65,7 +65,7 @@ def eh_canonica(str):
             return True
     return False
 
-def quality_report(df: pd.DataFrame()) -> pd.DataFrame:
+def quality_report(df: pd.DataFrame()) -> pd.DataFrame():
     l.info('Iniciando checagem de data quality')
     print()
     print('+--------------- DATA QUALITY ---------------+')
@@ -77,43 +77,47 @@ def quality_report(df: pd.DataFrame()) -> pd.DataFrame:
     print(f"Recursos sem versao: {total_sem_versao}")
     print(f"Ids duplicados: {total_id_duplicado}")
     print("+--------------- REFERENCIAS ----------------+")
-    
-    output_erros_ref = pd.DataFrame()
     # checagem de referencias
     # cria listas auxiliares para etapas de verificacao
-    referencias_index = recursos['url'].to_list()
-    id_index = recursos['id'].to_list()
-    name_index = recursos['name'].to_list()
+    referencias_index = df['url'].to_list()
+    id_index = df['id'].to_list()
+    name_index = df['name'].to_list()
+    # lista para armazenar os erros encontrados
+    lista_erros_ref = []
     # iteração no dataframe, linha a linha
-    for index, row in recursos.iterrows():
+    for index, row in df.iterrows():
+        msg_stream = []
+        ref_array = []
         # resgata o array de referências do recurso
         ref_array = row['referencias']
-        lista_erros_ref = []
         # para cada referência do recurso
         for r in ref_array:
             # checa se é URL
             if eh_url(r):
                 # se for URL, verifica se algum recurso dos json tem a mesma url
                 if r not in referencias_index:
-                    # se não encontrado, checa se não é URL canônica
+                    # se não encontrado, checa se é URL canônica
                     if eh_canonica(r) == False:
-                        print(f"A referencia da URL {r} do recurso {index} é inválida")
-                        lista_erros_ref.append(f"A referencia da URL {r} do recurso {index} é inválida")
+                        msg = f"A referencia da URL {r} do recurso {index} é inválida"
+                        print(msg)
+                        msg_stream.append(msg)
             else:
                 # se não for URL, verifica por id ou nome
                 if (r not in id_index) or (r not in name_index):
-                    print(f"A referencia {r} do recurso {index} não tem correspondente de nome ou id")
-                    lista_erros_ref.append(f"A referencia {r} do recurso {index} não tem correspondente de nome ou id")
-
-        output_erros_ref = output_erros_ref.append({'index':index , 'erros': lista_erros_ref}, ignore_index=True)
-
-        return output_erros_ref
+                    msg = f"A referencia {r} do recurso {index} não tem correspondente de nome ou id"
+                    print(msg)
+                    msg_stream.append(msg)
+                    
+        lista_erros_ref.append([index, msg_stream]) 
+        df_retorno = pd.DataFrame(lista_erros_ref, columns=['index', 'erros'])
+        df_retorno.set_index('index', drop=True, inplace=True)
+        return df_retorno
 
 if __name__ == '__main__':
     l.basicConfig(level = l.DEBUG, format='[%(levelname)s] %(asctime)s - %(message)s')
     l.info('Iniciando aplicação')
     
-    # download(url_download)
+    #download(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
@@ -166,8 +170,7 @@ if __name__ == '__main__':
     # salva os recursos em um DataFrame
     recursos = pd.DataFrame(recursos_list)
     quality = quality_report(recursos)
-
-    final_report = pd.merge(recursos, quality, how='left', left_index=True, right_on='index')
+    final_report = pd.merge(recursos, quality, how='left', left_index=True, right_index=True)
 
     # exporta para Excel
     try:
