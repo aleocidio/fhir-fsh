@@ -1,10 +1,14 @@
 # fhir-fsh
-Repositório com scripts que auxiliam no processamento de recursos FHIR
 
-O scrip main.py realiza o download dos recursos FHIR em JSON do site do Simplifier, descompacta, e gera um relatório com os principais atributos de cada um deles.
+## Objetivo
+* Desenvolver scripts em python para auxiliar na importação de recursos do site do Simplifier (https://simplifier.net/RedeNacionaldeDadosemSaude)
 
-Roadmap de implementações:
-[ ] Data Quality: checagem de id
-[ ] Reference Link: checagem de urls e ids de todas os referenciamentos
-[ ] Uso de ferramenta para realizar snapshot
-[ ] Conversão dos recursos para FSH com o GoFSH
+## Requisitos funcionais
+- [x] Download automático dos recursos FHIR do projeto RNDS no site do Simplifier
+- [x] Descompactação e leitura de dados dos arquivos JSON que permitem identificar os recursos (resourceType, id, url, name, title)
+- [ ] Verificação de versionamento e diff: os recursos anteriormente processados foram alterados? O que alterou? Houve versionamento? Existem novos arquivos? Algum arquivo foi renomeado?
+- [x] Verificar inconsistências entre os recursos: id nulo ou duplicado, nome nulo ou duplicado
+- [ ] Extrair as referências dos recursos e checar a correspondência entre os arquivos locais, considerando URL, nome e id
+- [ ] Recompilar referências e alterar os arquivos JSON
+- [ ] Chamada de ferramenta externa para realizar o Snapshot
+- [ ] Chamada de ferramenta externa para conversão dos recursos JSON em FSH
