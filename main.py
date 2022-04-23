@@ -7,12 +7,16 @@ import io
 import os
 import json
 import pandas as pd
+import logging
 
 # Variáveis globais
-
 url_download = 'https://simplifier.net/redenacionaldedadosemsaude/download?format=json'
 output_dir = 'simplifierRNDS/'
 current_dir = os.getcwd()
+
+#log
+log_level = logging.DEBUG
+log_fmt = '[%(levelname)s] %(asctime)s - %(message)s'
 
 
 # Dataframe para armazenar resultados
@@ -25,27 +29,26 @@ recursos_list = []
 def download(url):
     """Baixa o arquivo do simplifier contendo os json de recursos e extrai o zip"""
 
-    print("Iniciando download")
+    logging.info("Iniciando download")
     req = requests.get(url_download)
 
 
     with io.open('simplifierRNDS.zip','wb') as output_file:
         output_file.write(req.content)
-    print('Download concluído')
+    logging.info('Download concluído')
     
     try:
         with zipfile.ZipFile("simplifierRNDS.zip", mode="r") as archive:
             for info in archive.infolist():
-                print("Descompactando", info.filename)
+                logging.info(f"Descompactando {info.filename}")
                 archive.extract(info.filename, path=output_dir)
-                print("Descompactado")
     except zipfile.BadZipFile as error:
-        print(error)
+        logging.error(error)
 
 
 if __name__ == '__main__':
-    print('#### START #####')
-    
+    logging.basicConfig(level = log_level, format=log_fmt)
+    logging.info('Iniciando aplicação')   
     download(url_download)
     
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
@@ -55,7 +58,7 @@ if __name__ == '__main__':
 
         try:
             f = io.open(file_dir, encoding="utf-8")
-            print("Processando ", arquivo)
+            logging.info(f"Processando {arquivo}")
 
             data = json.load(f)
             
@@ -77,12 +80,16 @@ if __name__ == '__main__':
 
         except UnicodeDecodeError as error:
             f.close()
-            print(error)
+            logging.error(error)
     
-    print('Gerando relatório')
+    logging.info('Gerando relatório')
 
     recursos = pd.DataFrame(recursos_list)
     recursos.to_excel('recursos.xlsx')
+
+    logging.info('Relatório gerado em excel')
+
+
 
 # data quality
 # recursos sem id
