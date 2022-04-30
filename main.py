@@ -79,9 +79,11 @@ def quality_report(df):
     total_sem_id = df.replace({'':pd.NA})['id'].isna().sum()
     total_id_duplicado = df.loc[df['id'] != ''].duplicated('id').sum()
     total_sem_versao = df.replace({'':pd.NA})['version'].isna().sum()
+    total_url_duplicada = df.loc[df['url'] != ''].duplicated('url').sum()
     print(f"Recuros sem id:  {total_sem_id}")
     print(f"Recursos sem versao: {total_sem_versao}")
     print(f"Ids duplicados: {total_id_duplicado}")
+    print(f"URLs duplicadas: {total_url_duplicada}")
     return
 
 def reference_check(df):
@@ -198,17 +200,60 @@ if __name__ == '__main__':
         final_report.to_excel('recursos(1).xlsx')
     l.info('Gerado relatório')
 
-# %%
+#%% 
+def cria_features(df):
+    ''' Função para criar features que permitam comparar os recursos
+    o resultado é um df em que o prefixo das colunas sinaliza a origem da informação
+    fs_ filesystem
+    meta_ metadados do json
+    url_ da url declarada no json
+    '''    
+    novos_nomes_colunasA = {df.columns.values[0]:('fs_' + df.columns.values[0])}
+    novos_nomes_colunasB = {c:'meta_' + c for c in df.columns.values[1:]}
+    novos_nomes_colunas = {**novos_nomes_colunasA, **novos_nomes_colunasB}
+    df.rename(columns = novos_nomes_colunas, inplace = True)
+    df['url_resourceType'] = df['meta_url'].apply(lambda x: x.split('/')[-2])
+    df['url_name'] = df['meta_url'].apply(lambda x: x.split('/')[-1])
+    return df
 
-referencias_erro.index
-# %%
-final_report.iloc[[13, 14, 16, 17, 24, 25, 28, 32, 40, 52, 53, 59, 82, 83, 110]]
-# %%
-final_report.loc[13]['reference_error']
+#%%
+from bs4 import BeautifulSoup
 
-
-# http://www.saude.gov.br/fhir/r4/ValueSet/BRCondicaoMaternal-1.0
-# http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoMaternal
-
+def bs_scrapper():
+    payload = {
+        "PaginationViewModel.SelectedPage": 1,
+        "PaginationViewModel.SelectedPageSize": 100,
+        "ProjectKey": "RedeNacionaldeDadosemSaude",
+        "SelectedFhirVersions": "R4",
+        "Sort.SelectedProperty": "RankScore_desc"
+    }
+    call = requests.post('https://simplifier.net/redenacionaldedadosemsaude/filterprojectpublications', data=payload)
+    soup = BeautifulSoup(call.content, 'html.parser')
+    total_registros = int(soup.find("input", {"name":"PaginationViewModel.TotalCount"})['value'])
+    print(total_registros)
 # %%
-recursos.loc[recursos['name'].str.contains('matern', case=False)]['url']
+bs_scrapper()
+
+# Objetivo:
+# incremetar dataset com informações da web
+# Caption
+# Type
+# description
+# web_url
+# datetime
+# history
+# project FHIR API
+# para Structure Definition, é possivel baixar o snapshot
+#snapshot: https://simplifier.net/redenacionaldedadosemsaude/brcondicaomaternal/$downloadsnapshot?format=json
+
+# <div class="searchresult">
+#            <div class="row">
+#                        <a class="caption" href="https://simplifier.net/redenacionaldedadosemsaude/unidade%20de%20medida%20de%20medicamento">Unidade de Medida de Medicamento</a>
+# <div class="type">
+#                        <b>ValueSet</b>
+#                    </div>
+#                    <div class="description">
+#                        ValueSet utilizado para definir a unidade de medida de medicamentos sob informa&#xE7;&#xF5;es do fabricante.
+#                    </div>
+
+#<time class="localize onlyDate" datetime="2022-04-13T19:46:20.7448577Z">13/04/2022</time>
