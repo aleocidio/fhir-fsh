@@ -4,8 +4,9 @@
 
 #%%
 
-
 # Importando dependências
+from typing import List
+from pyparsing import infix_notation
 import requests
 import zipfile
 import io
@@ -13,6 +14,8 @@ import os
 import json
 import pandas as pd
 import logging as l
+
+from sqlalchemy import null
 from jsonpath_rw import parse, jsonpath
 
 def download(url):
@@ -21,6 +24,7 @@ def download(url):
     l.info("Iniciando download")
     req = requests.get(url_download)
 
+    # se houver arquivo previamente baixado, irá sobrescrever
     with io.open('simplifierRNDS.zip','wb') as output_file:
         output_file.write(req.content)
     print('Download concluído')
@@ -44,7 +48,32 @@ def eh_canonica(str):
             return True
     return False
 
-def quality_report(df: pd.DataFrame()) -> pd.DataFrame():
+def lista_referencias(arquivo, current_dir, output_dir):
+    file_dir = os.path.join(current_dir, output_dir, arquivo)
+    
+    try:
+            # abre o arquivo json
+            f = io.open(file_dir, encoding="utf-8")
+            l.info(f"Processando {arquivo}")
+            # carrega em uma classe json
+            data = json.load(f)
+            # lista temporária para receber todas as referências feitas
+            temp_list = []
+            # busca dentro do json os jsonpath definidos no início do programa
+            for key, value in json_path_expr_dict.items():
+                json_path_expr = parse(value)
+                busca = json_path_expr.find(data)
+                for i in busca:
+                    temp_list.append(i.value)            
+            # fecha o arquivo
+            f.close()
+     # tratamento de exceções de Decode
+    except UnicodeDecodeError as error:
+        f.close()
+        l.error(error)
+    return temp_list
+
+def quality_report(df):
     l.info('Iniciando checagem de data quality')
     print()
     print('+--------------- DATA QUALITY ---------------+')
@@ -55,42 +84,33 @@ def quality_report(df: pd.DataFrame()) -> pd.DataFrame():
     print(f"Recuros sem id:  {total_sem_id}")
     print(f"Recursos sem versao: {total_sem_versao}")
     print(f"Ids duplicados: {total_id_duplicado}")
+    return
+#%%
+def reference_check(df):
     print("+--------------- REFERENCIAS ----------------+")
     # checagem de referencias
     # cria listas auxiliares para etapas de verificacao
-    referencias_index = df['url'].to_list()
+    url_index = df['url'].to_list()
     id_index = df['id'].to_list()
     name_index = df['name'].to_list()
-    # lista para armazenar os erros encontrados
-    lista_erros_ref = []
-    # iteração no dataframe, linha a linha
+
+    erros = []
+
     for index, row in df.iterrows():
-        msg_stream = []
-        ref_array = []
-        # resgata o array de referências do recurso
-        ref_array = row['referencias']
-        # para cada referência do recurso
-        for r in ref_array:
-            # checa se é URL
-            if eh_url(r):
-                # se for URL, verifica se algum recurso dos json tem a mesma url
-                if r not in referencias_index:
-                    # se não encontrado, checa se é URL canônica
-                    if eh_canonica(r) == False:
-                        msg = f"A referencia da URL {r} do recurso {index} é inválida"
-                        print(msg)
-                        msg_stream.append(msg)
-            else:
-                # se não for URL, verifica por id ou nome
-                if (r not in id_index) or (r not in name_index):
-                    msg = f"A referencia {r} do recurso {index} não tem correspondente de nome ou id"
-                    print(msg)
-                    msg_stream.append(msg)
-        #agrupa os erros encontrados vinculando o index do recurso no dataframe com a lista de erros          
-        lista_erros_ref.append([index, msg_stream]) 
-        df_retorno = pd.DataFrame(lista_erros_ref, columns=['index', 'erros'])
-        df_retorno.set_index('index', drop=True, inplace=True)
-        return df_retorno
+        # checa se existe alguma referência
+        if len(row['referencias']) > 0:
+            for ref in row['referencias']:
+                if eh_url(ref):
+                    if eh_canonica(ref) == False:
+                        if ref not in url_index:
+                            erros.append({"index":index,"type":"URL NOT FOUND","reference_error": ("URL NOT FOUND " + ref) })
+                #se não for URL
+                else:
+                    if (ref not in id_index) or (ref not in name_index):
+                            erros.append({"index":index,"type":"NAME ID NOT FOUND","reference_error": ("NAME/ID NOT FOUND " + ref)})
+    return pd.DataFrame(erros).groupby('index').agg(pd.Series.tolist)
+        
+#%%
 
 if __name__ == '__main__':
     l.basicConfig(level = l.INFO, format='[%(levelname)s] %(asctime)s - %(message)s')
@@ -120,7 +140,7 @@ if __name__ == '__main__':
         "Links em Composition": "$.*.*.*.*.*.targetProfile[:]"
     }
 
-    download(url_download)
+    #download(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
@@ -137,8 +157,6 @@ if __name__ == '__main__':
             data = json.load(f)
             # inicia um dicionário em branco
             dict = {}
-            # inicia uma lista para receber as referencias
-            referencias = []
             # extrai no nome do arquivo
             dict['filename'] = arquivo
             # extração das principais chaves para o dicionário
@@ -158,12 +176,7 @@ if __name__ == '__main__':
             recursos_list.append(dict)
 
             # busca referências dentro do recurso
-            for key, value in json_path_expr_dict.items():
-                json_path_expr = parse(value)
-                busca = json_path_expr.find(data)
-                for i in busca:
-                    referencias.append(i.value)
-            dict['referencias'] = referencias
+            dict['referencias'] = lista_referencias(arquivo,current_dir,output_dir)
             # fecha o arquivo
             f.close()
         # tratamento de exceções de Decode
@@ -172,20 +185,14 @@ if __name__ == '__main__':
             l.error(error)
     # salva os recursos em um DataFrame
     recursos = pd.DataFrame(recursos_list)
-    quality = quality_report(recursos)
-    final_report = pd.merge(recursos, quality, how='left', left_index=True, right_index=True)
+    quality_report(recursos)
+    referencias_erro = reference_check(recursos)
+    final_report = pd.merge(recursos, referencias_erro[['reference_error']], how='left', left_index=True, right_index=True)
 
-    # exporta para Excel
+    #exporta para Excel
     try:
         final_report.to_excel('recursos.xlsx')
     except PermissionError:
         l.error("Erro ao salvar recursos.xlsx, tentando com outro nome de arquivo.")
         final_report.to_excel('recursos(1).xlsx')
     l.info('Gerado relatório')
-
-
-
-# reconstruir ids e vínculos
-
-# Nome é em CamelCase
-# id é com - e tudo minusculo
