@@ -14,8 +14,6 @@ import os
 import json
 import pandas as pd
 import logging as l
-
-from sqlalchemy import null
 from jsonpath_rw import parse, jsonpath
 
 def download(url):
