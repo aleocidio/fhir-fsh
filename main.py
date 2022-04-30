@@ -1,5 +1,10 @@
 # Scrapper de arquivos do Simplifier
 
+# o código abaixo inicia o ipython no vscode
+
+#%%
+
+
 # Importando dependências
 import requests
 import zipfile
@@ -9,32 +14,6 @@ import json
 import pandas as pd
 import logging as l
 from jsonpath_rw import parse, jsonpath
-
-# Variáveis globais
-
-url_download = 'https://simplifier.net/redenacionaldedadosemsaude/download?format=json'
-output_dir = 'simplifierRNDS/'
-current_dir = os.getcwd()
-url_canonica = ["http://terminology.hl7.org","http://hl7.org/fhir/"]
-# Dataframe para armazenar resultados
-recursos = pd.DataFrame()
-
-# Quando o pandas recebe uma lista de dicionários, cada dict é uma linha,
-# as chaves são as colunas e os valores scleaão os valores das células
-recursos_list = []
-
-# json path para buscar as referências dentro dos recursos
-# https://jsonpath.com/
-
-json_path_expr_dict = {
-    "Lista dos profiles": "$.*.*[:].*[:].profile[:]",
-    "Lista de valueSets": "$.*.*[:].binding.valueSet",
-    "Lista de Uri extensions": "$.*.*[:].fixedUri",
-    "Includes de valueSets": "$.*.*[:].system",
-    "ValueSet usado em Composition": "$.*.*.*.*.valueSet",
-    "Profiles usados em Composition": "$.*.*.*.*.*.profile[:]",
-    "Links em Composition": "$.*.*.*.*.*.targetProfile[:]"
-}
 
 def download(url):
     """Baixa o arquivo do simplifier contendo os json de recursos e extrai o zip"""
@@ -107,17 +86,41 @@ def quality_report(df: pd.DataFrame()) -> pd.DataFrame():
                     msg = f"A referencia {r} do recurso {index} não tem correspondente de nome ou id"
                     print(msg)
                     msg_stream.append(msg)
-                    
+        #agrupa os erros encontrados vinculando o index do recurso no dataframe com a lista de erros          
         lista_erros_ref.append([index, msg_stream]) 
         df_retorno = pd.DataFrame(lista_erros_ref, columns=['index', 'erros'])
         df_retorno.set_index('index', drop=True, inplace=True)
         return df_retorno
 
 if __name__ == '__main__':
-    l.basicConfig(level = l.DEBUG, format='[%(levelname)s] %(asctime)s - %(message)s')
+    l.basicConfig(level = l.INFO, format='[%(levelname)s] %(asctime)s - %(message)s')
     l.info('Iniciando aplicação')
     
-    #download(url_download)
+    # Variáveis globais
+
+    url_download = 'https://simplifier.net/redenacionaldedadosemsaude/download?format=json'
+    output_dir = 'simplifierRNDS/'
+    current_dir = os.getcwd()
+    url_canonica = ["http://terminology.hl7.org","http://hl7.org/fhir/"]
+    # Dataframe para armazenar resultados
+    recursos = pd.DataFrame()
+
+    recursos_list = []
+
+    # json path para buscar as referências dentro dos recursos
+    # https://jsonpath.com/
+
+    json_path_expr_dict = {
+        "Lista dos profiles": "$.*.*[:].*[:].profile[:]",
+        "Lista de valueSets": "$.*.*[:].binding.valueSet",
+        "Lista de Uri extensions": "$.*.*[:].fixedUri",
+        "Includes de valueSets": "$.*.*[:].system",
+        "ValueSet usado em Composition": "$.*.*.*.*.valueSet",
+        "Profiles usados em Composition": "$.*.*.*.*.*.profile[:]",
+        "Links em Composition": "$.*.*.*.*.*.targetProfile[:]"
+    }
+
+    download(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
@@ -186,5 +189,3 @@ if __name__ == '__main__':
 
 # Nome é em CamelCase
 # id é com - e tudo minusculo
-
-
