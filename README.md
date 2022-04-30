@@ -12,3 +12,7 @@
 - [ ] Recompilar referências e alterar os arquivos JSON
 - [ ] Chamada de ferramenta externa para realizar o Snapshot
 - [ ] Chamada de ferramenta externa para conversão dos recursos JSON em FSH
+
+
+## Melhorias
+* No script de checagem de referências com erro, excluir a lista de recursos e extensions canônicas

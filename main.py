@@ -83,7 +83,7 @@ def quality_report(df):
     print(f"Recursos sem versao: {total_sem_versao}")
     print(f"Ids duplicados: {total_id_duplicado}")
     return
-#%%
+
 def reference_check(df):
     print("+--------------- REFERENCIAS ----------------+")
     # checagem de referencias
@@ -107,7 +107,7 @@ def reference_check(df):
                     if (ref not in id_index) or (ref not in name_index):
                             erros.append({"index":index,"type":"NAME ID NOT FOUND","reference_error": ("NAME/ID NOT FOUND " + ref)})
     return pd.DataFrame(erros).groupby('index').agg(pd.Series.tolist)
-        
+
 #%%
 
 if __name__ == '__main__':
@@ -197,3 +197,18 @@ if __name__ == '__main__':
         l.error("Erro ao salvar recursos.xlsx, tentando com outro nome de arquivo.")
         final_report.to_excel('recursos(1).xlsx')
     l.info('Gerado relatório')
+
+# %%
+
+referencias_erro.index
+# %%
+final_report.iloc[[13, 14, 16, 17, 24, 25, 28, 32, 40, 52, 53, 59, 82, 83, 110]]
+# %%
+final_report.loc[13]['reference_error']
+
+
+# http://www.saude.gov.br/fhir/r4/ValueSet/BRCondicaoMaternal-1.0
+# http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoMaternal
+
+# %%
+recursos.loc[recursos['name'].str.contains('matern', case=False)]['url']
