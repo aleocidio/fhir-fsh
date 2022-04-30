@@ -119,12 +119,15 @@ if __name__ == '__main__':
     # Variáveis globais
 
     url_download = 'https://simplifier.net/redenacionaldedadosemsaude/download?format=json'
+    # URL de saída dos json de recursos após download e descompactação
     output_dir = 'simplifierRNDS/'
+    # diretório onde o programa está rodando
     current_dir = os.getcwd()
+    # URLS consideradas canônicas quando contêm
     url_canonica = ["http://terminology.hl7.org","http://hl7.org/fhir/"]
-    # Dataframe para armazenar resultados
+    # Dataframe para armazenar os recursos com metadados
     recursos = pd.DataFrame()
-
+    # lista temporária auxiliar para montar o dataframe
     recursos_list = []
 
     # json path para buscar as referências dentro dos recursos
@@ -140,7 +143,7 @@ if __name__ == '__main__':
         "Links em Composition": "$.*.*.*.*.*.targetProfile[:]"
     }
 
-    #download(url_download)
+    download(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
