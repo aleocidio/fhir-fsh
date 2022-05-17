@@ -1,0 +1,21 @@
+global:
+  url_canonica:
+    - http://terminology.hl7.org
+    - http://hl7.org/fhir/
+  output_dir: simplifierRNDS/
+
+busca_json:
+  Lista dos profiles: "$.*.*[:].*[:].profile[:]"
+  Lista de valueSets: "$.*.*[:].binding.valueSet"
+  Lista de Uri extensions: "$.*.*[:].fixedUri"
+  Includes de valueSets: "$.*.*[:].system"
+  ValueSet usado em Composition: "$.*.*.*.*.valueSet"
+  Profiles usados em Composition: "$.*.*.*.*.*.profile[:]"
+  Links em Composition: "$.*.*.*.*.*.targetProfile[:]"
+
+simplifier:
+  project_key: RedeNacionaldeDadosemSaude
+  fhir_version: R4
+  base_url: https://simplifier.net/
+  snapshot_url: /$downloadsnapshot?format=json
+  zip_url: /$download?format=json
