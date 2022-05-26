@@ -16,7 +16,7 @@ def calcula_paginas(registros_total, registros_pagina) -> int:
         i = registros_total//registros_pagina    
     return paginas_calc
 
-def download_info():
+def download_info():    
     # define variáveis acessórias
     registros_total = 0
     registros_pagina = 100

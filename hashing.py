@@ -14,3 +14,7 @@ def get_hash(file: str, buffer_size: int = 65536) -> str:
         sha256.update(data)
     return(sha256.hexdigest())
 
+
+# %%
+hashlib.sha256(b'aleocidio').hexdigest()
+# %%
