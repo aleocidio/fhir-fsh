@@ -1,12 +1,7 @@
 # Scrapper de arquivos do Simplifier
-
-# o código abaixo inicia o ipython no vscode
-
 #%%
 
 # Importando dependências
-from typing import List
-from pyparsing import infix_notation
 import requests
 import zipfile
 import io
@@ -14,16 +9,22 @@ import os
 import json
 import pandas as pd
 import logging as l
-from jsonpath_rw import parse, jsonpath
+from jsonpath_rw import parse
+from datetime import datetime
+from hashing import get_hash
 
 def download(url):
-    """Baixa o arquivo do simplifier contendo os json de recursos e extrai o zip"""
+    """
+    url = url do projeto no simplifier. Ex: https://simplifier.net/redenacionaldedadosemsaude
+    Baixa o arquivo zip do simplifier contendo todos os arquivos em formato json
+    e descompacta o zip em uma pasta local. Apaga o .zip após descompactação.
+    """
 
     l.info("Iniciando download")
     req = requests.get(url_download)
 
-    # se houver arquivo previamente baixado, irá sobrescrever
-    with io.open('simplifierRNDS.zip','wb') as output_file:
+    nome_arquivo = datetime.now().strftime("YYYYMMDDHHMMSS")
+    with io.open(nome_arquivo,'wb') as output_file:
         output_file.write(req.content)
     print('Download concluído')
     
@@ -35,37 +36,47 @@ def download(url):
 
     except zipfile.BadZipFile as error:
         l.error(error)
+    
+    os.remove(nome_arquivo)
 
-def eh_url(str):
+def eh_url(str) -> bool:
+    """ Retorna se a string passada é uma url
+    """
     if "://" in str:
         return True
     return False
-def eh_canonica(str):
+
+def eh_canonica(str) -> bool:
+    """Retorna se a string passada é uma url canônica, com base nas configurações"""
     for i in url_canonica:
         if i in str:
             return True
     return False
 
 def lista_referencias(arquivo, current_dir, output_dir):
+    """Lista as referências encontradas dentro de um recurso, com base na configuração busca_json.
+    Ainda está chumbado em código com o dicionário json_path_expr_dict"""
+    
     file_dir = os.path.join(current_dir, output_dir, arquivo)
     
     try:
-            # abre o arquivo json
-            f = io.open(file_dir, encoding="utf-8")
-            l.info(f"Processando {arquivo}")
-            # carrega em uma classe json
-            data = json.load(f)
-            # lista temporária para receber todas as referências feitas
-            temp_list = []
-            # busca dentro do json os jsonpath definidos no início do programa
-            for key, value in json_path_expr_dict.items():
-                json_path_expr = parse(value)
-                busca = json_path_expr.find(data)
-                for i in busca:
-                    temp_list.append(i.value)            
-            # fecha o arquivo
-            f.close()
-     # tratamento de exceções de Decode
+        # abre o arquivo json
+        f = io.open(file_dir, encoding="utf-8")
+        l.info(f"Processando {arquivo}")
+        # carrega em uma classe json
+        data = json.load(f)
+        # lista temporária para receber todas as referências feitas
+        temp_list = []
+        # busca dentro do json os jsonpath definidos no início do programa
+        for key, value in json_path_expr_dict.items():
+            json_path_expr = parse(value)
+            busca = json_path_expr.find(data)
+            for i in busca:
+                temp_list.append(i.value)            
+        # fecha o arquivo
+        f.close()
+        
+    # tratamento de exceções de Decode
     except UnicodeDecodeError as error:
         f.close()
         l.error(error)
@@ -79,11 +90,13 @@ def quality_report(df):
     total_sem_id = df.replace({'':pd.NA})['id'].isna().sum()
     total_id_duplicado = df.loc[df['id'] != ''].duplicated('id').sum()
     total_sem_versao = df.replace({'':pd.NA})['version'].isna().sum()
+    total_url_duplicada = df.loc[df['url'] != ''].duplicated('url').sum()
     print(f"Recuros sem id:  {total_sem_id}")
     print(f"Recursos sem versao: {total_sem_versao}")
     print(f"Ids duplicados: {total_id_duplicado}")
+    print(f"URLs duplicadas: {total_url_duplicada}")
     return
-#%%
+
 def reference_check(df):
     print("+--------------- REFERENCIAS ----------------+")
     # checagem de referencias
@@ -107,7 +120,22 @@ def reference_check(df):
                     if (ref not in id_index) or (ref not in name_index):
                             erros.append({"index":index,"type":"NAME ID NOT FOUND","reference_error": ("NAME/ID NOT FOUND " + ref)})
     return pd.DataFrame(erros).groupby('index').agg(pd.Series.tolist)
-        
+
+def cria_features(df):
+    ''' Função para criar features que permitam comparar os recursos
+    o resultado é um df em que o prefixo das colunas sinaliza a origem da informação
+    fs_ filesystem
+    meta_ metadados do json
+    url_ da url declarada no json
+    '''    
+    novos_nomes_colunasA = {df.columns.values[0]:('fs_' + df.columns.values[0])}
+    novos_nomes_colunasB = {c:'meta_' + c for c in df.columns.values[1:]}
+    novos_nomes_colunas = {**novos_nomes_colunasA, **novos_nomes_colunasB}
+    df.rename(columns = novos_nomes_colunas, inplace = True)
+    df['url_resourceType'] = df['meta_url'].apply(lambda x: x.split('/')[-2])
+    df['url_name'] = df['meta_url'].apply(lambda x: x.split('/')[-1])
+    return df
+
 #%%
 
 if __name__ == '__main__':
@@ -138,31 +166,29 @@ if __name__ == '__main__':
         "Includes de valueSets": "$.*.*[:].system",
         "ValueSet usado em Composition": "$.*.*.*.*.valueSet",
         "Profiles usados em Composition": "$.*.*.*.*.*.profile[:]",
-        "Links em Composition": "$.*.*.*.*.*.targetProfile[:]"
+        "Links em Composition": "$.*.*.*.*.*.targetProfile[:]",
     }
 
     download(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))
-
     # percorre todos os arquivos json para extração de informações
     for arquivo in arquivos_json:
-        file_dir = os.path.join(current_dir, output_dir, arquivo)
-
+        file_path = os.path.join(current_dir, output_dir, arquivo)
         try:
+            # inicia um dicionário em branco
+            dict = {}
             # abre o arquivo json
-            f = io.open(file_dir, encoding="utf-8")
+            f = io.open(file_path, encoding="utf-8")
             l.info(f"Processando {arquivo}")
             # carrega em uma classe json
             data = json.load(f)
-            # inicia um dicionário em branco
-            dict = {}
             # extrai no nome do arquivo
             dict['filename'] = arquivo
             # extração das principais chaves para o dicionário
             keys = ['resourceType', 'id', 'name', 'title',
-                    'url', 'version', 'status', 'publisher']
+                    'url', 'version', 'status', 'publisher', 'type']
             for key in keys:
                 try:
                     dict[key] = data[key]
@@ -190,6 +216,8 @@ if __name__ == '__main__':
     referencias_erro = reference_check(recursos)
     final_report = pd.merge(recursos, referencias_erro[['reference_error']], how='left', left_index=True, right_index=True)
 
+    final_report = cria_features(final_report)
+    
     #exporta para Excel
     try:
         final_report.to_excel('recursos.xlsx')
@@ -197,3 +225,5 @@ if __name__ == '__main__':
         l.error("Erro ao salvar recursos.xlsx, tentando com outro nome de arquivo.")
         final_report.to_excel('recursos(1).xlsx')
     l.info('Gerado relatório')
+
+#%% 

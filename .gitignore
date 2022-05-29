@@ -3,3 +3,4 @@ simplifierRNDS/
 *.xlsx
 __pycache__/
 *.ipynb
+*.html
