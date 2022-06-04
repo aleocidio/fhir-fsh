@@ -1,0 +1,56 @@
+{
+  "_default": {
+    "1": {
+      "name": "user1",
+      "groups": [
+        "user"
+      ]
+    },
+    "2": {
+      "name": "user2",
+      "groups": [
+        "admin",
+        "user"
+      ]
+    },
+    "3": {
+      "name": "user3",
+      "groups": [
+        "sudo",
+        "user"
+      ]
+    }
+  },
+  "groups": {
+    "1": {
+      "name": "user",
+      "permissions": [
+        {
+          "type": "read"
+        }
+      ]
+    },
+    "2": {
+      "name": "sudo",
+      "permissions": [
+        {
+          "type": "sudo"
+        }
+      ]
+    },
+    "3": {
+      "name": "admin",
+      "permissions": [
+        {
+          "type": "read"
+        },
+        {
+          "type": "write"
+        },
+        {
+          "type": "sudo"
+        }
+      ]
+    }
+  }
+}

@@ -2,53 +2,33 @@
 #%%
 
 # Importando dependências
-import requests
-import zipfile
+
 import io
 import os
 import json
 import pandas as pd
 import logging as l
-from jsonpath_rw import parse
 from datetime import datetime
+
+from jsonpath_rw import parse
 from hashing import get_hash
 
-def download(url):
-    """
-    url = url do projeto no simplifier. Ex: https://simplifier.net/redenacionaldedadosemsaude
-    Baixa o arquivo zip do simplifier contendo todos os arquivos em formato json
-    e descompacta o zip em uma pasta local. Apaga o .zip após descompactação.
-    """
+# Importando libs
+from src.download import download_file
 
-    l.info("Iniciando download")
-    req = requests.get(url_download)
+def timestamp() -> str:
+    return datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
-    nome_arquivo = datetime.now().strftime("YYYYMMDDHHMMSS")
-    with io.open(nome_arquivo,'wb') as output_file:
-        output_file.write(req.content)
-    print('Download concluído')
-    
-    try:
-        with zipfile.ZipFile("simplifierRNDS.zip", mode="r") as archive:
-            for info in archive.infolist():
-                l.info(f"Descompactando {info.filename}")
-                archive.extract(info.filename, path=output_dir)
-
-    except zipfile.BadZipFile as error:
-        l.error(error)
-    
-    os.remove(nome_arquivo)
-
-def eh_url(str) -> bool:
+def is_url(str) -> bool:
     """ Retorna se a string passada é uma url
     """
     if "://" in str:
         return True
     return False
 
-def eh_canonica(str) -> bool:
+def is_canonical(str, canonical_list) -> bool:
     """Retorna se a string passada é uma url canônica, com base nas configurações"""
-    for i in url_canonica:
+    for i in canonical_list:
         if i in str:
             return True
     return False
@@ -111,8 +91,8 @@ def reference_check(df):
         # checa se existe alguma referência
         if len(row['referencias']) > 0:
             for ref in row['referencias']:
-                if eh_url(ref):
-                    if eh_canonica(ref) == False:
+                if is_url(ref):
+                    if is_canonical(ref) == False:
                         if ref not in url_index:
                             erros.append({"index":index,"type":"URL NOT FOUND","reference_error": ("URL NOT FOUND " + ref) })
                 #se não for URL
@@ -150,7 +130,7 @@ if __name__ == '__main__':
     # diretório onde o programa está rodando
     current_dir = os.getcwd()
     # URLS consideradas canônicas quando contêm
-    url_canonica = ["http://terminology.hl7.org","http://hl7.org/fhir/"]
+    canonical_list = ["http://terminology.hl7.org","http://hl7.org/fhir/"]
     # Dataframe para armazenar os recursos com metadados
     recursos = pd.DataFrame()
     # lista temporária auxiliar para montar o dataframe
@@ -169,7 +149,7 @@ if __name__ == '__main__':
         "Links em Composition": "$.*.*.*.*.*.targetProfile[:]",
     }
 
-    download(url_download)
+    download_file(url_download)
     
     # lista os arquivos json no diretório output_dir
     arquivos_json = os.listdir(os.path.join(current_dir, output_dir))

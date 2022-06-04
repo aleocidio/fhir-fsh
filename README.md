@@ -3,6 +3,9 @@
 ## Objetivo
 * Desenvolver scripts em python para auxiliar na importação de recursos do site do Simplifier (https://simplifier.net/RedeNacionaldeDadosemSaude)
 
+## Observações
+* As datas serão tratadas em UTC
+
 ## Requisitos funcionais
 *Baixar arquivos do Simplifier*
 - [x] Download do *.zip dos recursos FHIR do projeto no site do Simplifier com conteúdo em JSON
@@ -11,7 +14,7 @@
 *Scrapping de informações do site Simplifier*
 - [x] Scrapper para ler os metadados e id dos recursos no Simplifier passando um projeto como referência
 
-- [ ] Criar um hash sha256 de cada arquivo para checagem de alterações no arquivo
+- [x] Criar um hash sha256 de cada arquivo para checagem de alterações no arquivo
 
 - [ ] Verificação de diff no projeto
     - [ ] novos arquivos adicionados?
@@ -36,8 +39,8 @@
 - [ ] Atualizar os arquivos JSON com os links corrigidos
 
 *Banco de dados*
-- [ ] Armazenar cada processamento (download, projeto)
-- [ ] Armazenar os recursos baixados
+- [x] Armazenar cada processamento (download, scrap)
+- [x] Armazenar os recursos baixados
 - [ ] Armazenar os resultados dos checks de qualidade
 - [ ] Armazenar os arquivos alterados com histórico de alteração
 
